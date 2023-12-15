@@ -1,6 +1,7 @@
 <script setup>
 // COMPOSITION API
 import { onMounted, reactive, ref, watch } from 'vue'
+import Drawer from './components/Drawer.vue'
 import axios from 'axios'
 
 import CardList from './components/CardList.vue'
@@ -33,17 +34,65 @@ const fetchItems = async () => {
     const { data } = await axios.get('https://70d8ccb0e330bcf6.mokky.dev/items', {
       params
     })
-    itemsData.value = data
+    itemsData.value = data.map((obj) => ({
+      //Когда мы получили данные, перед записью в itemsData, мы внутрь data, будем по умолчанию добавлять isFavorite, isAdded
+      ...obj, // всё что находиться в object (id, title, price...)
+      favoriteId: null, // ID для закладки, в закладках есть объект который имеет свой id (нужжно для удаления)
+      isFavorite: false, // внутрь доваляем isFavourite
+      isAdded: false // внутрь добавлем isAdded
+    }))
   } catch (err) {
     console.log(`Ошибка при получении данных ${err}`)
   }
 }
+const fetchFavorites = async () => {
+  try {
+    const { data: favorites } = await axios.get('https://70d8ccb0e330bcf6.mokky.dev/favourites')
 
-// ПРИ ПЕРВОМ РЕНДЕРЕ ДЕЛАТЬ ЧТО-ТО === onMOUNTED
-onMounted(fetchItems)
+    itemsData.value = itemsData.value.map((item) => {
+      const favorite = favorites.find((favorite) => favorite.parentId === item.id) //из данных (favorites), найди такой объект, который равен в БД favorites ;(
 
-// ПРИ ОТСЛЕЖИВАНИИ ЧЕГО ЛИБО
-watch(filterd, fetchItems)
+      if (!favorite) {
+        // если нет такого, вернём элемент
+        return item
+      }
+      return {
+        ...item,
+        isFavorite: true,
+        favoriteId: favorite.id
+      }
+    })
+  } catch (err) {
+    console.log(`Ошибка при получении данных ${err}`)
+  }
+}
+const addToFavorite = async (item) => {
+  try {
+    if (!item.isFavorite) {
+      const obj = {
+        parentId: item.id
+      } // создаём объект с ID как у item
+      item.isFavorite = true // вешаем на него true
+      const { data } = await axios.post('https://70d8ccb0e330bcf6.mokky.dev/favourites', obj) // (ПОЛУЧЕНИЕ ДАННЫХ - GET, ОТПРАВКА - POST) - отправляем obj на сервер      
+      item.favoriteId = data.id
+      console.log(data)
+    } else {
+      item.isFavorite = false     
+      await axios.delete(`https://70d8ccb0e330bcf6.mokky.dev/favourites/${item.favoriteId}`)     
+      item.favoriteId = null
+      
+    }
+  } catch (e) {
+    console.log(`Error ${e}`)
+  }
+}
+
+onMounted(async () => {
+  // ПРИ ПЕРВОМ РЕНДЕРЕ ДЕЛАТЬ ЧТО-ТО === onMOUNTED
+  await fetchItems()
+  await fetchFavorites()
+})
+watch(filterd, fetchItems) // ПРИ ОТСЛЕЖИВАНИИ ЧЕГО ЛИБО
 </script>
 
 <template>
@@ -74,7 +123,7 @@ watch(filterd, fetchItems)
         </div>
       </div>
 
-      <CardList :items="itemsData" />
+      <CardList :items="itemsData" @addToFavorite="addToFavorite" />
     </div>
   </div>
 </template>
