@@ -5,9 +5,7 @@ import { inject, reactive, watch, ref, onMounted } from 'vue';
 import debounce from 'lodash.debounce';
 
 const { addToCart, removeFromCart, cart } = inject('cart');
-
 const itemsData = ref([]);
-
 const filterd = reactive({
   sortBy: 'title',
   searchQuery: ''
@@ -21,15 +19,12 @@ const addToCartPlus = (item) => {
   }
   console.log(cart.value)
 };
-
 const onChangeSelect = (e) => {
   filterd.sortBy = e.target.value
 }
-
 const onChangeSearchInput = debounce((e) => {
   filterd.searchQuery = e.target.value
 }, 400)
-
 const addToFavorite = async (item) => {
   try {
     if (!item.isFavorite) {
@@ -98,7 +93,6 @@ watch(cart, () => {
   }))
 })
 watch(filterd, fetchItems)
-
 onMounted(async () => {
   const localCart = localStorage.getItem('cart')
   cart.value = localCart ? JSON.parse(localCart) : []

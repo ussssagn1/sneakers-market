@@ -21,6 +21,7 @@ const addToCart = (item) => {
   cart.value.push(item)
   item.isAdded = true
 }
+
 const removeFromCart = (item) => {
   cart.value.splice(cart.value.indexOf(item), 1)
   item.isAdded = false
